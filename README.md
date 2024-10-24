@@ -1,4 +1,4 @@
-# Point-Pro
+# Point-Pro - Point Clouds from Single Views
 
 This project provides a set of tools for depth map generation, point cloud creation, and distance analysis from single images using Apple's Depth-Pro model for monocular depth map genration.
 
