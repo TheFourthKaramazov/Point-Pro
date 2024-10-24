@@ -1,6 +1,6 @@
 # Usage Guide for Depth Analysis Tool in Jupyter Notebooks
 
-This guide explains how to use the Depth Analysis Tool efficiently in Jupyter Notebooks.
+This guide explains how to use Point-Pro efficiently in Jupyter Notebooks.
 
 ## Setup
 
