@@ -23,15 +23,14 @@ This project relies on the following Python libraries:
 
 ## Installation
 
-1. Clone this repository:
-# point_pro
+1. Install Depth Pro:
+
+Follow the installation and virtual enviornment creation instructions at https://github.com/apple/ml-depth-pro/blob/main/README.md
+
+2. Clone this repository:
 
 git clone https://github.com/your-username/depth-analysis-tool.git](https://github.com/TheFourthKaramazov/point_pro.git
-cd depth-analysis-tool
 
-
-3. Install Depth Pro:
-Follow the installation instructions at https://github.com/apple/ml-depth-pro/blob/main/README.md
 
 ## Credit
 
