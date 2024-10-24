@@ -32,8 +32,9 @@ Follow the installation and virtual enviornment creation instructions at https:/
 
 2. Clone this repository:
 
+```bash 
 git clone https://github.com/your-username/depth-analysis-tool.git](https://github.com/TheFourthKaramazov/point_pro.git
-
+```
 
 ## Credit
 
