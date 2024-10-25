@@ -41,12 +41,4 @@ git clone https://github.com/TheFourthKaramazov/point_pro.git
 This project uses the Depth Pro model for depth estimation. The model is developped by Apple's ML lab and the github repository can be found here:
 https://github.com/apple/ml-depth-pro
 
-
-@article{Bochkovskii2024:arxiv,
-  author     = {Aleksei Bochkovskii and Ama\"{e}l Delaunoy and Hugo Germain and Marcel Santos and
-               Yichao Zhou and Stephan R. Richter and Vladlen Koltun}
-  title      = {Depth Pro: Sharp Monocular Metric Depth in Less Than a Second},
-  journal    = {arXiv},
-  year       = {2024},
-  url        = {https://arxiv.org/abs/2410.02073},
-}
+Bochkovskii, A., Delaunoy, A., Germain, H., Santos, M., Zhou, Y., Richter, S. R., & Koltun, V. (2024). Depth Pro: Sharp Monocular Metric Depth in Less Than a Second. *arXiv*. Retrieved from https://arxiv.org/abs/2410.02073
