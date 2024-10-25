@@ -38,7 +38,7 @@ git clone https://github.com/TheFourthKaramazov/point_pro.git
 
 ## Credit
 
-This project uses the Depth Pro model for depth estimation. The model is Developped by Apple's ML lab and the github repository can be found here:
+This project uses the Depth Pro model for depth estimation. The model is developped by Apple's ML lab and the github repository can be found here:
 https://github.com/apple/ml-depth-pro
 
 
