@@ -22,7 +22,7 @@ This guide explains how to use Point-Pro efficiently in Jupyter Notebooks.
     model.eval()
     ```
 
-## Analyzing Images
+## Creating and Analyzing Depth Map
 
 To analyze an image:
 
@@ -83,7 +83,9 @@ To analyze an image:
     plt.show()
     ```
 
- 7. Create and Save Point Cloud
+## Creating Point Cloud
+
+ 1. Create and Save Point Cloud
 
     ```python
     # create a point cloud
@@ -94,7 +96,7 @@ To analyze an image:
     ```
     
 
- 8. Use software such as CloudCompare or MeshLab to visualize results
+ 2. Use software such as CloudCompare or MeshLab to visualize results
 
 
 ## Tips for Efficient Use
