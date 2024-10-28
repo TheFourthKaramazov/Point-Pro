@@ -83,6 +83,20 @@ To analyze an image:
     plt.show()
     ```
 
+ 7. Create and Save Point Cloud
+
+    ```python
+    # create a point cloud
+    point_cloud = create_point_cloud(depth_map, image_tensor, focallength_px)
+
+    # save point cloud
+    save_point_cloud(point_cloud, "path/to/your/directory")
+    ```
+    
+
+ 8. Use software such as CloudCompare or MeshLab to visualize results
+
+
 ## Tips for Efficient Use
 
 1. Load the model only once at the beginning of your notebook session.
