@@ -11,6 +11,7 @@ This project provides a set of tools for depth map generation, point cloud creat
 - Point cloud creation from depth maps
 - Distance calculation and analysis
 - Visualization of results
+- (new) Input an entire directory of images and output entire directory of corresponding point clouds
 
 ## Dependencies
 
