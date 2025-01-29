@@ -16,8 +16,14 @@ def setup_device():
         print("GPU is not available, using CPU")
     return device
 
-def load_and_process_images(image_paths, transform, device):
-    """Load and preprocess multiple images."""
+def get_image_paths_from_directory(directory, extensions=(".jpg", ".jpeg", ".png")):
+    """Fetch all image file paths from the given directory."""
+    return [os.path.join(directory, f) for f in os.listdir(directory) if f.lower().endswith(extensions)]
+
+def load_and_process_images_from_directory(directory, transform, device):
+    """Load and preprocess all images from a directory."""
+    image_paths = get_image_paths_from_directory(directory)
+    
     images_tensors = []
     focal_lengths = []
     
@@ -26,7 +32,7 @@ def load_and_process_images(image_paths, transform, device):
         images_tensors.append(transform(image).to(device))
         focal_lengths.append(f_px)
     
-    return images_tensors, focal_lengths
+    return image_paths, images_tensors, focal_lengths
 
 def run_depth_inference(model, image_tensors, focal_lengths):
     """Run depth inference on multiple images."""
