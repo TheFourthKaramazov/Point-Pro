@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import open3d as o3d
+import os
 import cv2
 from PIL import Image
 
@@ -15,113 +16,138 @@ def setup_device():
         print("GPU is not available, using CPU")
     return device
 
-def load_and_process_image(image_path, transform, device):
-    """Load and preprocess an image."""
-    image, _, f_px = depth_pro.load_rgb(image_path)
-    image_tensor = transform(image).to(device)
-    return image_tensor, f_px
+def get_image_paths_from_directory(directory, extensions=(".jpg", ".jpeg", ".png")):
+    """Fetch all image file paths from the given directory."""
+    return [os.path.join(directory, f) for f in os.listdir(directory) if f.lower().endswith(extensions)]
 
-def run_depth_inference(model, image_tensor, f_px):
-    """Run depth inference on the image using Depth Pro."""
-    with torch.no_grad():
-        prediction = model.infer(image_tensor, f_px=f_px)
-    depth_map = prediction["depth"].cpu().numpy()
-    focallength_px = prediction["focallength_px"].item()
-    return depth_map, focallength_px
-
-def create_point_cloud(depth_map, image, focallength_px, scale_ratio=1.0):
-    """Create point cloud from depth map and image."""
-    H, W = depth_map.shape
-    image = ensure_image_format(image)
+def load_and_process_images_from_directory(directory, transform, device):
+    """Load and preprocess all images from a directory."""
+    image_paths = get_image_paths_from_directory(directory)
     
-    x_grid, y_grid = np.meshgrid(np.arange(W), np.arange(H))
-    cx, cy = W / 2, H / 2
+    images_tensors = []
+    focal_lengths = []
+    
+    for image_path in image_paths:
+        image, _, f_px = depth_pro.load_rgb(image_path)
+        images_tensors.append(transform(image).to(device))
+        focal_lengths.append(f_px)
+    
+    return image_paths, images_tensors, focal_lengths
 
-    Z = depth_map * scale_ratio
-    X = (x_grid - cx) * Z / focallength_px
-    Y = (y_grid - cy) * Z / focallength_px
+def run_depth_inference(model, image_tensors, focal_lengths):
+    """Run depth inference on multiple images."""
+    depth_maps = []
+    focal_px_values = []
+    
+    with torch.no_grad():
+        for image_tensor, f_px in zip(image_tensors, focal_lengths):
+            prediction = model.infer(image_tensor, f_px=f_px)
+            depth_maps.append(prediction["depth"].cpu().numpy())
+            focal_px_values.append(prediction["focallength_px"].item())
+    
+    return depth_maps, focal_px_values
 
-    point_map = np.stack((X, Y, Z), axis=-1)
+def create_point_clouds(depth_maps, images, focal_px_values, scale_ratio=1.0):
+    """Create multiple point clouds from depth maps and images."""
+    point_clouds = []
+    
+    for depth_map, image, focal_px in zip(depth_maps, images, focal_px_values):
+        H, W = depth_map.shape
+        image = ensure_image_format(image)
+        
+        x_grid, y_grid = np.meshgrid(np.arange(W), np.arange(H))
+        cx, cy = W / 2, H / 2
 
-    point_cloud = o3d.geometry.PointCloud()
-    point_cloud.points = o3d.utility.Vector3dVector(point_map.reshape(-1, 3))
-    point_cloud.colors = o3d.utility.Vector3dVector(image.reshape(-1, 3))
+        Z = depth_map * scale_ratio
+        X = (x_grid - cx) * Z / focal_px
+        Y = (y_grid - cy) * Z / focal_px
 
-    valid_points = Z.flatten() > 0
-    point_cloud.points = o3d.utility.Vector3dVector(np.asarray(point_cloud.points)[valid_points])
-    point_cloud.colors = o3d.utility.Vector3dVector(np.asarray(point_cloud.colors)[valid_points])
+        point_map = np.stack((X, Y, Z), axis=-1)
 
-    return point_cloud
+        point_cloud = o3d.geometry.PointCloud()
+        point_cloud.points = o3d.utility.Vector3dVector(point_map.reshape(-1, 3))
+        point_cloud.colors = o3d.utility.Vector3dVector(image.reshape(-1, 3))
+
+        valid_points = Z.flatten() > 0
+        point_cloud.points = o3d.utility.Vector3dVector(np.asarray(point_cloud.points)[valid_points])
+        point_cloud.colors = o3d.utility.Vector3dVector(np.asarray(point_cloud.colors)[valid_points])
+
+        point_clouds.append(point_cloud)
+    
+    return point_clouds
 
 def ensure_image_format(image):
-    """Ensure image is in the correct format (H, W, 3) and properly scaled for point cloud processing and display."""
+    """Ensure image is in the correct format (H, W, 3) and properly scaled."""
     if isinstance(image, torch.Tensor):
         image = image.cpu().detach().numpy()
     
-    if image.shape[0] == 3:  # If it's in (3, H, W) format
+    if image.shape[0] == 3:  # If in (3, H, W) format
         image = np.transpose(image, (1, 2, 0))
     
-    # Check if the image is in [-1, 1] range
     if image.min() < 0 or image.max() > 1:
-        # Rescale from [-1, 1] to [0, 1]
-        image = (image + 1) / 2
+        image = (image + 1) / 2  # Normalize to [0,1]
     
-    # Ensure the image is in [0, 1] range
-    image = np.clip(image, 0, 1)
-    
-    return image
+    return np.clip(image, 0, 1)
 
-def visualize_results(image, depth_map):
-    """Visualize the original image and depth map."""
-    plt.figure(figsize=(10, 5))
+def visualize_results(images, depth_maps):
+    """Visualize multiple images and depth maps."""
+    num_images = len(images)
+    fig, axes = plt.subplots(num_images, 2, figsize=(10, 5 * num_images))
     
-    plt.subplot(1, 2, 1)
-    plt.imshow(image)
-    plt.title("Original Image")
-    plt.axis('off')
+    if num_images == 1:
+        axes = [axes]  # Make it iterable for a single image
+    
+    for i, (image, depth_map) in enumerate(zip(images, depth_maps)):
+        axes[i][0].imshow(image)
+        axes[i][0].set_title(f"Original Image {i+1}")
+        axes[i][0].axis('off')
 
-    plt.subplot(1, 2, 2)
-    depth_plot = plt.imshow(depth_map, cmap='viridis')
-    plt.title("Depth Map")
-    plt.colorbar(depth_plot, label='Depth (m)')
-    plt.axis('off')
+        depth_plot = axes[i][1].imshow(depth_map, cmap='viridis')
+        axes[i][1].set_title(f"Depth Map {i+1}")
+        fig.colorbar(depth_plot, ax=axes[i][1], label='Depth (m)')
+        axes[i][1].axis('off')
 
     plt.tight_layout()
     plt.show()
 
-def save_point_cloud(point_cloud, output_path):
-    """Save the point cloud to a file."""
-    o3d.io.write_point_cloud(output_path, point_cloud)
+def save_point_clouds(point_clouds, image_paths):
+    """Save multiple point clouds to 'generated_pointclouds/'."""
+    output_dir = "generated_pointclouds"
+    os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
 
-def calculate_distances(depth_map, points_of_interest=None):
+    for point_cloud, image_path in zip(point_clouds, image_paths):
+        filename = os.path.basename(image_path).split('.')[0] + ".ply"
+        output_path = os.path.join(output_dir, filename)
+        o3d.io.write_point_cloud(output_path, point_cloud)
+        print(f"Saved: {output_path}")
+
+def calculate_distances(depth_maps, points_of_interest=None):
     """
-    Calculate absolute metric distances from the camera to objects in the depth map.
+    Calculate absolute metric distances from the camera to objects in multiple depth maps.
     
     Parameters:
-    depth_map (np.array): The depth map generated by Depth Pro, assumed to be in meters.
-    points_of_interest (list of tuples): Optional. List of (y, x) coordinates of specific points to measure.
-                                         If None, calculates for all points.
-    
-    Returns:
-    dict: A dictionary of distances. If points_of_interest is provided, keys are the points.
-          If not, returns 'min', 'max', and 'mean' distances.
-    """
-    if points_of_interest is None:
-        # Calculate statistics for the entire depth map
-        valid_depths = depth_map[depth_map > 0]  # Ignore zero or negative depths
-        return {
-            'min_distance': np.min(valid_depths),
-            'max_distance': np.max(valid_depths),
-            'mean_distance': np.mean(valid_depths)
-        }
-    else:
-        # Calculate distances for specific points
-        distances = {}
-        for i, (y, x) in enumerate(points_of_interest):
-            distance = depth_map[y, x]
-            if distance > 0:
-                distances[f'point_{i}'] = distance
-            else:
-                distances[f'point_{i}'] = None  # or some invalid marker
-        return distances
+    depth_maps (list of np.array): List of depth maps generated by Depth Pro.
+    points_of_interest (list of lists): Optional. List of lists, where each sublist contains
+                                        (y, x) coordinates of specific points to measure.
 
+    Returns:
+    dict: A dictionary containing distance statistics or point-specific distances for each depth map.
+    """
+    results = {}
+    
+    for i, depth_map in enumerate(depth_maps):
+        if points_of_interest is None:
+            valid_depths = depth_map[depth_map > 0]  # Ignore zero or negative depths
+            results[f'image_{i+1}'] = {
+                'min_distance': np.min(valid_depths),
+                'max_distance': np.max(valid_depths),
+                'mean_distance': np.mean(valid_depths)
+            }
+        else:
+            distances = {}
+            for j, (y, x) in enumerate(points_of_interest[i]):
+                distance = depth_map[y, x]
+                distances[f'point_{j}'] = distance if distance > 0 else None
+            results[f'image_{i+1}'] = distances
+    
+    return results

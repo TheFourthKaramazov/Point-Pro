@@ -1,10 +1,10 @@
 # Usage Guide for Depth Analysis Tool in Jupyter Notebooks
 
-This guide explains how to use Point-Pro efficiently in Jupyter Notebooks.
+This guide explains how to use **Point-Pro** efficiently in Jupyter Notebooks.
 
 ## Setup
 
-1. Import required modules:
+1. **Import required modules**:
 
     ```python
     import depth_pro
@@ -13,7 +13,7 @@ This guide explains how to use Point-Pro efficiently in Jupyter Notebooks.
     %matplotlib inline
     ```
 
-2. Load the model (do this only once per notebook session):
+2. **Load the model** (do this only once per notebook session):
 
     ```python
     device = setup_device()
@@ -22,88 +22,97 @@ This guide explains how to use Point-Pro efficiently in Jupyter Notebooks.
     model.eval()
     ```
 
-## Creating and Analyzing Depth Map
+## Creating and Analyzing Depth Maps
 
-To analyze an image:
+To analyze **all images in a directory**:
 
-1. Load and process the image:
+1. **Load and process images from a directory**:
 
     ```python
-    image_path = "path/to/your/image.jpeg"
-    image_tensor, f_px = load_and_process_image(image_path, transform, device)
+    image_dir = "path/to/image_directory"  # Path to the directory containing images
+    image_paths, image_tensors, focal_lengths = load_and_process_images_from_directory(image_dir, transform, device)
     ```
 
-2. Run depth inference:
+2. **Run depth inference on all images**:
 
     ```python
-    depth_map, focallength_px = run_depth_inference(model, image_tensor, f_px)
+    depth_maps, focal_px_values = run_depth_inference(model, image_tensors, focal_lengths)
     ```
 
-3. Visualize results:
+3. **Visualize results**:
 
     ```python
-    visualize_results(ensure_image_format(image_tensor), depth_map)
+    visualize_results(image_tensors, depth_maps)
     ```
 
-4. Calculate distances:
+4. **Calculate distances**:
 
     ```python
-    overall_distances = calculate_distances(depth_map)
+    overall_distances = calculate_distances(depth_maps)
     print("Overall distances:")
-    print(f"Minimum distance: {overall_distances['min_distance']:.2f} meters")
-    print(f"Maximum distance: {overall_distances['max_distance']:.2f} meters")
-    print(f"Mean distance: {overall_distances['mean_distance']:.2f} meters")
+    for img_idx, distances in overall_distances.items():
+        print(f"\nImage {img_idx}:")
+        print(f"Minimum distance: {distances['min_distance']:.2f} meters")
+        print(f"Maximum distance: {distances['max_distance']:.2f} meters")
+        print(f"Mean distance: {distances['mean_distance']:.2f} meters")
     ```
 
-5. Calculate distances for specific points:
+5. **Calculate distances for specific points**:
 
     ```python
-    points_of_interest = [(100, 200), (150, 300), (200, 400)]  # Example coordinates
-    specific_distances = calculate_distances(depth_map, points_of_interest)
+    points_of_interest = [
+        [(100, 200), (150, 300)],  # Points for image 1
+        [(200, 400), (250, 450)]   # Points for image 2
+    ]
+    
+    specific_distances = calculate_distances(depth_maps, points_of_interest)
     
     print("\nDistances at specific points:")
-    for point, distance in specific_distances.items():
-        if distance is not None:
-            print(f"{point}: {distance:.2f} meters")
-        else:
-            print(f"{point}: Invalid depth")
+    for img_idx, distances in specific_distances.items():
+        print(f"\nImage {img_idx}:")
+        for point, distance in distances.items():
+            if distance is not None:
+                print(f"{point}: {distance:.2f} meters")
+            else:
+                print(f"{point}: Invalid depth")
     ```
 
-6. Visualize depth map with points of interest:
+6. **Visualize depth map with points of interest**:
 
     ```python
-    plt.figure(figsize=(10, 8))
-    plt.imshow(depth_map, cmap='viridis')
-    plt.colorbar(label='Distance (meters)')
-    plt.title('Depth Map')
-    
-    for y, x in points_of_interest:
-        plt.plot(x, y, 'ro')  # Mark points of interest with red dots
-    
-    plt.show()
+    import matplotlib.pyplot as plt
+
+    for i, (depth_map, points) in enumerate(zip(depth_maps, points_of_interest)):
+        plt.figure(figsize=(10, 8))
+        plt.imshow(depth_map, cmap='viridis')
+        plt.colorbar(label='Distance (meters)')
+        plt.title(f'Depth Map {i+1}')
+
+        for y, x in points:
+            plt.plot(x, y, 'ro')  # Mark points of interest with red dots
+
+        plt.show()
     ```
 
-## Creating Point Cloud
+## Creating and Saving Point Clouds
 
- 1. Create and Save Point Cloud
+1. **Create and save point clouds for all images**:
 
     ```python
-    # create a point cloud
-    point_cloud = create_point_cloud(depth_map, image_tensor, focallength_px)
+    # Create point clouds
+    point_clouds = create_point_clouds(depth_maps, image_tensors, focal_px_values)
 
-    # save point cloud
-    save_point_cloud(point_cloud, "path/to/your/directory")
+    # Save point clouds automatically in 'generated_pointclouds/' directory
+    save_point_clouds(point_clouds, image_paths)
     ```
-    
 
- 2. Use software such as CloudCompare or MeshLab to visualize results
-
+2. **Use software such as CloudCompare or MeshLab to visualize results.**
 
 ## Tips for Efficient Use
 
 1. Load the model only once at the beginning of your notebook session.
 2. Reuse the `model` and `transform` variables for multiple images.
-3. Clear output of cells that generate large visualizations to save memory.
+3. Clear the output of cells that generate large visualizations to save memory.
 4. Use `%matplotlib inline` to display plots directly in the notebook.
 5. If working with multiple images, consider using functions to encapsulate the analysis process.
 
